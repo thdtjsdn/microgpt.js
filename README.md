@@ -83,3 +83,9 @@ A minimalist, no-dependency JavaScript implementation of a GPT-style Transformer
 ```bash
 git clone [https://github.com/thdtjsdn/microgpt.js.git](https://github.com/thdtjsdn/microgpt.js.git)
 cd microgpt.js
+
+# To start training
+node train.js
+
+# To generate text
+node sample.js
