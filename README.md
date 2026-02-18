@@ -74,7 +74,7 @@ A minimalist, no-dependency JavaScript implementation of a GPT-style Transformer
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 * **Node.js** (Recommended: 18.x or higher)
