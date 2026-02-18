@@ -1,3 +1,6 @@
+input.txt
+model_weights.json
+
 # Logs
 logs
 *.log
