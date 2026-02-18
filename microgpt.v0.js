@@ -164,38 +164,38 @@ MicroGPT.Model = (function () {
 			var x_res = x;
 			x = rmsnorm(x);
 			// Attention
-			var q = linear(x, state_dict['l'+l+'.wq']);
-			var k = linear(x, state_dict['l'+l+'.wk']);
-			var v = linear(x, state_dict['l'+l+'.wv']);
+			var q = linear(x, state_dict['l' + l + '.wq']);
+			var k = linear(x, state_dict['l' + l + '.wk']);
+			var v = linear(x, state_dict['l' + l + '.wv']);
 			keys[l].push(k); values[l].push(v);
 
 			var heads = [];
 			for (var h = 0; h < config.n_head; h++) {
 				var start = h * config.head_dim, end = start + config.head_dim;
 				var qh = q.slice(start, end);
-				var kh_hist = keys[l].map(function(ki) { return ki.slice(start, end); });
-				var vh_hist = values[l].map(function(vi) { return vi.slice(start, end); });
+				var kh_hist = keys[l].map(function (ki) { return ki.slice(start, end); });
+				var vh_hist = values[l].map(function (vi) { return vi.slice(start, end); });
 
-				var scores = kh_hist.map(function(kh) {
+				var scores = kh_hist.map(function (kh) {
 					var dot = new Value(0);
-					for(var i=0; i<qh.length; i++) dot = dot.add(qh[i].mul(kh[i]));
+					for (var i = 0; i < qh.length; i++) dot = dot.add(qh[i].mul(kh[i]));
 					return dot.div(Math.sqrt(config.head_dim));
 				});
 				var att = softmax(scores);
-				var hout = Array(config.head_dim).fill(0).map(function(_, i) {
+				var hout = Array(config.head_dim).fill(0).map(function (_, i) {
 					var sum = new Value(0);
-					att.forEach(function(a, t) { sum = sum.add(a.mul(vh_hist[t][i])); });
+					att.forEach(function (a, t) { sum = sum.add(a.mul(vh_hist[t][i])); });
 					return sum;
 				});
 				heads = heads.concat(hout);
 			}
-			x = linear(heads, state_dict['l'+l+'.wo']).map(function(v, i) { return v.add(x_res[i]); });
+			x = linear(heads, state_dict['l' + l + '.wo']).map(function (v, i) { return v.add(x_res[i]); });
 
 			// MLP
 			x_res = x;
 			x = rmsnorm(x);
-			x = linear(x, state_dict['l'+l+'.w1']).map(function(v) { return v.relu(); });
-			x = linear(x, state_dict['l'+l+'.w2']).map(function(v, i) { return v.add(x_res[i]); });
+			x = linear(x, state_dict['l' + l + '.w1']).map(function (v) { return v.relu(); });
+			x = linear(x, state_dict['l' + l + '.w2']).map(function (v, i) { return v.add(x_res[i]); });
 		}
 		return linear(x, state_dict.lm_head);
 	}
@@ -207,43 +207,43 @@ MicroGPT.Model = (function () {
 // 4. Core Logic (Train, Save, Load, Generate)
 // ==========================================
 MicroGPT.Core = {
-	saveModel: function(state_dict, uchars, config, filePath) {
+	saveModel: function (state_dict, uchars, config, filePath) {
 		var data = { config: config, uchars: uchars, weights: {} };
 		for (var k in state_dict) {
-			data.weights[k] = state_dict[k].map(function(row) {
-				return row.map(function(v) { return v.data; });
+			data.weights[k] = state_dict[k].map(function (row) {
+				return row.map(function (v) { return v.data; });
 			});
 		}
 		fs.writeFileSync(filePath || MicroGPT.Config.modelPath, JSON.stringify(data));
 		console.log("\n[Success] Model saved to: " + (filePath || MicroGPT.Config.modelPath));
 	},
 
-	loadModel: function(filePath) {
+	loadModel: function (filePath) {
 		var p = filePath || MicroGPT.Config.modelPath;
 		if (!fs.existsSync(p)) return null;
 		var data = JSON.parse(fs.readFileSync(p, 'utf8'));
 		var state_dict = {};
 		for (var k in data.weights) {
-			state_dict[k] = data.weights[k].map(function(row) {
-				return row.map(function(d) { return new MicroGPT.Autograd.Value(d); });
+			state_dict[k] = data.weights[k].map(function (row) {
+				return row.map(function (d) { return new MicroGPT.Autograd.Value(d); });
 			});
 		}
 		console.log("[Success] Model loaded.");
 		return { state_dict: state_dict, uchars: data.uchars, config: data.config, BOS: data.uchars.length };
 	},
 
-	generate: function(count, modelData, temperature) {
+	generate: function (count, modelData, temperature) {
 		var temp = temperature || 0.8;
 		var results = [];
 		var sd = modelData.state_dict, cfg = modelData.config, uchars = modelData.uchars, BOS = modelData.BOS;
 
 		for (var i = 0; i < count; i++) {
 			var keys = [], values = [], sample = [], token_id = BOS;
-			for(var l=0; l<cfg.n_layer; l++) { keys.push([]); values.push([]); }
+			for (var l = 0; l < cfg.n_layer; l++) { keys.push([]); values.push([]); }
 
 			for (var pos = 0; pos < cfg.block_size; pos++) {
 				var logits = MicroGPT.Model.forward(token_id, pos, keys, values, sd, cfg);
-				var probs = MicroGPT.Model.softmax(logits.map(function(l) { return l.div(temp); }));
+				var probs = MicroGPT.Model.softmax(logits.map(function (l) { return l.div(temp); }));
 				var next = MicroGPT.Utils.choices([...Array(probs.length).keys()], probs.map(p => p.data));
 				if (next === BOS) break;
 				sample.push(uchars[next]);
@@ -254,13 +254,13 @@ MicroGPT.Core = {
 		return results;
 	},
 
-	train: function(numSteps, callback) {
+	train: function (numSteps, callback) {
 		var conf = MicroGPT.Config;
 		if (!fs.existsSync(conf.inputPath)) {
 			console.log("Downloading dataset...");
 			var file = fs.createWriteStream(conf.inputPath);
-			https.get(conf.sourceUrl, function(res) {
-				res.pipe(file).on('finish', function() { file.close(); MicroGPT.Core.train(numSteps, callback); });
+			https.get(conf.sourceUrl, function (res) {
+				res.pipe(file).on('finish', function () { file.close(); MicroGPT.Core.train(numSteps, callback); });
 			});
 			return;
 		}
@@ -278,17 +278,17 @@ MicroGPT.Core = {
 			wpe: MicroGPT.Model.createMatrix(config.block_size, config.n_embd),
 			lm_head: MicroGPT.Model.createMatrix(vocab_size, config.n_embd)
 		};
-		for(var i=0; i<config.n_layer; i++) {
-			sd['l'+i+'.wq'] = MicroGPT.Model.createMatrix(config.n_embd, config.n_embd);
-			sd['l'+i+'.wk'] = MicroGPT.Model.createMatrix(config.n_embd, config.n_embd);
-			sd['l'+i+'.wv'] = MicroGPT.Model.createMatrix(config.n_embd, config.n_embd);
-			sd['l'+i+'.wo'] = MicroGPT.Model.createMatrix(config.n_embd, config.n_embd);
-			sd['l'+i+'.w1'] = MicroGPT.Model.createMatrix(config.n_embd * 4, config.n_embd);
-			sd['l'+i+'.w2'] = MicroGPT.Model.createMatrix(config.n_embd, config.n_embd * 4);
+		for (var i = 0; i < config.n_layer; i++) {
+			sd['l' + i + '.wq'] = MicroGPT.Model.createMatrix(config.n_embd, config.n_embd);
+			sd['l' + i + '.wk'] = MicroGPT.Model.createMatrix(config.n_embd, config.n_embd);
+			sd['l' + i + '.wv'] = MicroGPT.Model.createMatrix(config.n_embd, config.n_embd);
+			sd['l' + i + '.wo'] = MicroGPT.Model.createMatrix(config.n_embd, config.n_embd);
+			sd['l' + i + '.w1'] = MicroGPT.Model.createMatrix(config.n_embd * 4, config.n_embd);
+			sd['l' + i + '.w2'] = MicroGPT.Model.createMatrix(config.n_embd, config.n_embd * 4);
 		}
 
 		var params = [];
-		for(var k in sd) sd[k].forEach(row => row.forEach(p => params.push(p)));
+		for (var k in sd) sd[k].forEach(row => row.forEach(p => params.push(p)));
 
 		var m = Array(params.length).fill(0), v = Array(params.length).fill(0);
 		console.log("Training (" + numSteps + " steps)...");
@@ -298,20 +298,20 @@ MicroGPT.Core = {
 			var tokens = [BOS].concat(doc.split('').map(c => uchars.indexOf(c))).concat([BOS]);
 			var n = Math.min(config.block_size, tokens.length - 1);
 			var keys = [], values = [], losses = [];
-			for(var l=0; l<config.n_layer; l++) { keys.push([]); values.push([]); }
+			for (var l = 0; l < config.n_layer; l++) { keys.push([]); values.push([]); }
 
 			for (var p = 0; p < n; p++) {
 				var logits = MicroGPT.Model.forward(tokens[p], p, keys, values, sd, config);
 				var probs = MicroGPT.Model.softmax(logits);
-				losses.push(probs[tokens[p+1]].log().neg());
+				losses.push(probs[tokens[p + 1]].log().neg());
 			}
 			var loss = losses.reduce((a, b) => a.add(b), new MicroGPT.Autograd.Value(0)).div(n);
 			params.forEach(p => p.grad = 0);
 			loss.backward();
 
 			// Adam Update
-			var lr = 0.01 * (1 - s/numSteps);
-			for(var i=0; i<params.length; i++) {
+			var lr = 0.01 * (1 - s / numSteps);
+			for (var i = 0; i < params.length; i++) {
 				m[i] = 0.9 * m[i] + 0.1 * params[i].grad;
 				v[i] = 0.99 * v[i] + 0.01 * Math.pow(params[i].grad, 2);
 				var m_h = m[i] / (1 - Math.pow(0.9, s + 1));
@@ -321,7 +321,7 @@ MicroGPT.Core = {
 			if (s % 10 === 0) process.stdout.write("Step " + s + " | Loss: " + loss.data.toFixed(4) + "\r");
 		}
 		console.log("\nDone.");
-		if(callback) callback(sd, uchars, config, BOS);
+		if (callback) callback(sd, uchars, config, BOS);
 	}
 };
 
@@ -345,11 +345,11 @@ var savedData = MicroGPT.Core.loadModel();
 if (savedData) {
 	console.log("학습된 모델로 이름을 생성합니다:");
 	var names = MicroGPT.Core.generate(10, savedData, 0.7);
-	names.forEach((n, i) => console.log((i+1) + ". " + n));
+	names.forEach((n, i) => console.log((i + 1) + ". " + n));
 } else {
 	console.log("저장된 모델이 없습니다. 먼저 학습(train)을 진행해주세요.");
 	// 모델이 없을 경우 자동으로 학습 시작 (샘플)
-	MicroGPT.Core.train(200, function(sd, uchars, config, BOS) {
+	MicroGPT.Core.train(200, function (sd, uchars, config, BOS) {
 		MicroGPT.Core.saveModel(sd, uchars, config);
 		console.log("학습 완료 및 모델 저장됨. 다시 실행하면 로드하여 생성합니다.");
 	});
