@@ -8,7 +8,7 @@ var https = require('https');
 var path = require('path');
 var readline = require('readline');
 
-var MicroGPT = {
+global.MicroGPT = {
 	Config: {
 		seed: 42,
 		inputPath: path.join(__dirname, 'input.txt'),
