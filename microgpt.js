@@ -358,7 +358,7 @@ MicroGPT.Core = {
 // 4. Execution Controller (Async Sample)
 // ==========================================
 async function main() {
-	console.log("--- MicroGPT v3 (Async Streaming) ---");
+	console.log("--- MicroGPT v2 (Async Streaming) ---");
 	var model = MicroGPT.Core.load();
 
 	if (model) {
