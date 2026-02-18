@@ -84,8 +84,8 @@ A minimalist, no-dependency JavaScript implementation of a GPT-style Transformer
 git clone [https://github.com/thdtjsdn/microgpt.js.git](https://github.com/thdtjsdn/microgpt.js.git)
 cd microgpt.js
 
-# To start training
+# 1. 학습을 실행할 때 (기본 설정 500 step)
 node train.js
 
-# To generate text
+# 2. 이미 학습된 모델로 텍스트를 생성할 때
 node sample.js
